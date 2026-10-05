@@ -1,0 +1,10 @@
+# Environment Variables Configuration Example
+# Copy or set these environment variables in your environment or IDE before running the application.
+
+# Database Credentials
+DB_USERNAME=root
+DB_PASSWORD=your_secure_mysql_password
+
+# JWT Secret Key (HMAC-SHA256, minimum 256 bits / 32 characters)
+JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+JWT_EXPIRATION_MS=86400000
