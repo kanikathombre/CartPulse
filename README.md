@@ -1,217 +1,319 @@
-# CartPulse — E-Commerce System (Modular Monolith)
+# CartPulse — E-Commerce System
 
-A full-stack, modular monolith e-commerce management system built with **Java 17**, **Spring Boot 3**, **MySQL**, **Spring Security (JWT)**, and **React.js**.
+A full-stack e-commerce management system built using **Java, Spring Boot, MySQL, Spring Security (JWT), and React.js**.
 
-Designed specifically as an interview-ready project demonstrating clean architectural principles, entity lifecycle management, stateless security, transactional integrity, automated data seeding, and test-driven backend development—**without Lombok, Kafka, Docker, or unnecessary infrastructure complexity**.
+CartPulse is designed as a **modular monolith** that demonstrates clean backend architecture, REST API development, secure authentication, transactional order processing, product and cart management, and unit testing.
 
 ---
 
 ## 🏛️ System Architecture
 
-```mermaid
-graph TD
-    subgraph Frontend["React.js SPA (Vite)"]
-        UI["Modern Glassmorphism UI (Inter Font)"]
-        AuthContext["Auth Context (JWT State)"]
-        CartContext["Cart & Coupon Context"]
-        Axios["Axios API Client (Bearer Interceptor)"]
-    end
-
-    subgraph Backend["Spring Boot 3 Modular Monolith Backend"]
-        Security["Spring Security + JwtAuthenticationFilter"]
-        
-        subgraph Controllers["REST Controllers Layer"]
-            AC["AuthController"]
-            PC["ProductController"]
-            CC["CartController"]
-            CPC["CouponController"]
-            OC["OrderController"]
-            ADC["AdminController"]
-            HC["HealthController"]
-        end
-
-        subgraph ExceptionHandling["Global Exception Layer"]
-            GEH["@RestControllerAdvice (GlobalExceptionHandler)"]
-            ERR["Standard ErrorResponse DTO"]
-        end
-
-        subgraph Services["Business Services Layer (@Transactional)"]
-            AS["AuthService"]
-            PS["ProductService"]
-            CS["CartService"]
-            CPS["CouponService"]
-            OS["OrderService (Stock & Price Snapshot)"]
-            ADS["AdminService"]
-        end
-
-        subgraph Repositories["Spring Data JPA Repositories Layer"]
-            UR["UserRepository"]
-            PR["ProductRepository (Derived JPQL Queries)"]
-            CR["CartRepository & CartItemRepository"]
-            CPR["CouponRepository"]
-            OR["OrderRepository & OrderItemRepository"]
-        end
-
-        subgraph Seeder["Initialization"]
-            DS["CommandLineRunner (DataSeeder)"]
-        end
-    end
-
-    subgraph Database["MySQL Database"]
-        DB[(MySQL DB)]
-    end
-
-    UI --> AuthContext
-    UI --> CartContext
-    AuthContext --> Axios
-    CartContext --> Axios
-    Axios --> Security
-    Security --> Controllers
-    Controllers --> Services
-    Controllers --> GEH
-    Services --> Repositories
-    Repositories --> DB
-    DS --> Repositories
+```text
+                    React.js Frontend
+                           │
+                           ▼
+                    Axios API Client
+                           │
+                           ▼
+              Spring Security + JWT
+                           │
+                           ▼
+                   REST Controllers
+                           │
+                           ▼
+                    Service Layer
+                           │
+                           ▼
+                Spring Data JPA
+                           │
+                           ▼
+                    MySQL Database
 ```
 
----
+### Backend Structure
 
-## 🌟 Key Modules & Business Features
+```text
+Controller
+    ↓
+Service
+    ↓
+Repository
+    ↓
+JPA / Hibernate
+    ↓
+MySQL
+```
 
-1. **Authentication & Authorization (JWT):**
-   - Stateless JWT authentication using `jjwt-api`.
-   - Role-Based Access Control (`ROLE_USER` vs. `ROLE_ADMIN`).
-   - BCrypt password hashing.
-   - Pre-seeded account credentials.
-
-2. **Product Catalog & Derived Query Filtering:**
-   - Real-time text search across product name and description.
-   - Category filtering & price range filtering using Spring Data JPA query methods (`findByCategoryIgnoreCase`, `findByPriceBetween`, `searchProducts`).
-
-3. **Cart Management:**
-   - User cart creation linked via `@OneToOne` with `User`.
-   - Cart item quantity updates, additions, and validation against real-time product stock.
-
-4. **Coupon & Discount Engine:**
-   - Percentage discount calculation with optional maximum discount caps.
-   - Validation logic checking expiration dates, active status, and minimum order requirements.
-
-5. **Order Processing & Historical Price Snapshot:**
-   - Atomic checkout logic managed via `@Transactional`.
-   - Decrements stock levels atomically on purchase.
-   - **Price Snapshot Pattern:** Captures `priceAtPurchase` in `OrderItem` to maintain immutable historical purchase values regardless of future catalog price changes.
-   - Restores product stock when an order is cancelled.
-
-6. **Admin Dashboard Analytics:**
-   - Real-time key performance indicators (Total Revenue, Total Orders, Pending Orders, Total Products, Total Users).
-   - Product CRUD management modal.
-   - Customer Order status management (`PLACED`, `CONFIRMED`, `SHIPPED`, `DELIVERED`, `CANCELLED`).
-   - Coupon creation and status management.
+The backend follows a layered architecture where controllers handle HTTP requests, services contain business logic, and repositories handle database operations.
 
 ---
 
-## 💡 Key Java & Spring Boot Interview Talking Points
+## 🌟 Key Features
 
-If discussing this project in a Java / Spring Boot technical interview, highlight these key design choices:
+### 🔐 Authentication & Authorization
 
-1. **Why Explicit Getters/Setters instead of Lombok?**
-   - Demonstrates complete understanding of standard Java bean encapsulation, explicit constructor injection, and object immutability without hiding boilerplate behind annotation processors.
+- JWT-based stateless authentication
+- Role-based access control
+- `ROLE_USER` and `ROLE_ADMIN`
+- BCrypt password hashing
+- Protected REST APIs using Spring Security
 
-2. **Constructor-Based Dependency Injection:**
-   - Promotes immutability (`private final` service fields), facilitates easy unit testing without Spring context spinners, and avoids field injection anti-patterns (`@Autowired` on fields).
+### 🛍️ Product Catalog
 
-3. **Atomic Transactions (`@Transactional`):**
-   - Used in `OrderService.checkoutCart()` to group cart reading, coupon validation, stock validation/reduction, order persistence, and cart clearing into a single database transaction. If stock fails for any item, the entire transaction rolls back cleanly.
+- Product listing and details
+- Search by product name and description
+- Category filtering
+- Price range filtering
+- Product stock management
+- Admin product CRUD operations
 
-4. **Price Snapshot Pattern:**
-   - Explanation: Products can change price over time. Storing a relation to `Product.price` directly in an order history would retroactively modify old receipt values. `OrderItem` explicitly copies `priceAtPurchase = product.getPrice()` at checkout.
+### 🛒 Cart Management
 
-5. **Stateless Security Architecture:**
-   - Spring Security is configured with `SessionCreationPolicy.STATELESS`. Every incoming HTTP request passes through `JwtAuthenticationFilter`, which extracts the `Authorization: Bearer <token>` header, parses claims, and sets the `SecurityContextHolder` authentication context.
+- User-specific shopping carts
+- Add products to cart
+- Update item quantities
+- Remove cart items
+- Stock availability validation
 
-6. **Global Exception Handling (`@RestControllerAdvice`):**
-   - Standardizes error responses across all controllers into a predictable JSON structure (`ErrorResponse` containing `status`, `message`, `timestamp`, `path`, `errors`), preventing stack traces from leaking to clients.
+### 🎟️ Coupon Management
+
+- Percentage-based discounts
+- Minimum order amount validation
+- Coupon expiration validation
+- Active/inactive coupon status
+- Maximum discount limits
+- Admin coupon management
+
+### 📦 Order Processing
+
+- Checkout from shopping cart
+- Transactional order processing
+- Stock reduction during checkout
+- Order history
+- Order status management
+- Order cancellation
+- Stock restoration after cancellation
+
+### 💰 Price Snapshot
+
+CartPulse uses a **price snapshot pattern** for order history.
+
+When an order is placed, the product's current price is stored in `OrderItem.priceAtPurchase`.
+
+This ensures that historical orders continue to show the original purchase price even if the product price changes later.
+
+### 👨‍💼 Admin Dashboard
+
+The admin dashboard provides:
+
+- Total revenue
+- Total orders
+- Pending orders
+- Total products
+- Total users
+- Product management
+- Order status management
+- Coupon management
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Backend:** Java 17+, Spring Boot 3.2.5, Spring Web, Spring Data JPA, Spring Security, JJWT (0.12.5), Hibernate, MySQL Connector/J, Jakarta Bean Validation.
-- **Testing:** JUnit 5, Mockito.
-- **Frontend:** React 18, Vite 5, Axios, Lucide React icons, Inter Google font, Vanilla CSS with CSS variables and glassmorphism styling.
-- **Documentation:** SpringDoc OpenAPI 3.0 / Swagger UI.
+### Backend
+
+- Java 17+
+- Spring Boot 3.2.5
+- Spring Web
+- Spring Data JPA
+- Spring Security
+- JJWT 0.12.5
+- Hibernate
+- MySQL
+- Jakarta Bean Validation
+
+### Frontend
+
+- React 18
+- Vite
+- Axios
+- React Router
+- Vanilla CSS
+- Lucide React
+
+### Testing
+
+- JUnit 5
+- Mockito
+
+### API Documentation
+
+- SpringDoc OpenAPI
+- Swagger UI
+
+---
+
+## 🔑 Key Technical Concepts
+
+### Constructor-Based Dependency Injection
+
+Services use constructor-based dependency injection with `final` dependencies.
+
+This improves testability and avoids field injection.
+
+### Transaction Management
+
+Order checkout is handled using Spring's `@Transactional`.
+
+The checkout process includes:
+
+```text
+Cart Validation
+      ↓
+Coupon Validation
+      ↓
+Stock Validation
+      ↓
+Stock Reduction
+      ↓
+Order Creation
+      ↓
+Cart Clearing
+```
+
+If an operation fails during the transaction, the database changes can be rolled back.
+
+### Stateless JWT Security
+
+The application uses:
+
+```text
+SessionCreationPolicy.STATELESS
+```
+
+Each authenticated request contains a JWT in the `Authorization` header.
+
+The JWT authentication filter validates the token and establishes the user's security context.
+
+### Global Exception Handling
+
+`@RestControllerAdvice` is used to provide consistent error responses across REST APIs.
+
+This prevents individual controllers from having to implement repetitive exception handling logic.
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Java JDK 17** or later (`java -version`)
-- **Node.js 18+** and `npm`
-- **MySQL Server 8.0+** running on `localhost:3306`
+
+Make sure the following are installed:
+
+- Java JDK 17 or later
+- Node.js 18 or later
+- npm
+- MySQL 8.0 or later
 
 ---
 
-### Step 1: Database Setup & Environment Configuration
+## 1. Database Setup
+
 Create the MySQL database:
+
 ```sql
 CREATE DATABASE IF NOT EXISTS mini_ecommerce;
 ```
 
-Set environment variables or edit configuration (`backend/.env.example` / `application.properties`):
-```properties
-DB_URL=jdbc:mysql://localhost:3306/mini_ecommerce?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
-DB_USERNAME=root
-DB_PASSWORD=YOUR_MYSQL_PASSWORD
-
-JWT_SECRET=your_super_secret_jwt_key_at_least_32_characters_long
-JWT_EXPIRATION_MS=86400000
-```
-
-For frontend configuration (`frontend/.env.example`):
-```properties
-VITE_API_BASE_URL=http://localhost:8080/api
-```
+The application can also create the database automatically when configured accordingly.
 
 ---
 
-### Step 2: Run the Backend Application
+## 2. Backend Configuration
 
-Navigate to the `backend` folder and start Spring Boot using Maven wrapper:
+Configure the backend using the provided:
+
+```text
+backend/.env.example
+```
+
+Example:
+
+```properties
+DB_URL=jdbc:mysql://localhost:3306/mini_ecommerce
+DB_USERNAME=root
+DB_PASSWORD=YOUR_MYSQL_PASSWORD
+
+JWT_SECRET=your_secure_jwt_secret_at_least_32_characters
+JWT_EXPIRATION_MS=86400000
+```
+
+Do not commit your actual `.env` file or database credentials.
+
+---
+
+## 3. Run the Backend
+
+Open a terminal in the project root:
+
 ```bash
 cd backend
 .\mvnw.cmd spring-boot:run
 ```
-*(The backend will start on **`http://localhost:8080`** and automatically seed initial data).*
 
-To run unit tests:
+The backend will run on:
+
+```text
+http://localhost:8080
+```
+
+### Run Backend Tests
+
 ```bash
 .\mvnw.cmd test
 ```
 
 ---
 
-### Step 3: Run the React Frontend
+## 4. Run the Frontend
 
-Open a new terminal, navigate to `frontend`, install dependencies, and start dev server:
+Open another terminal:
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*(The frontend will start on **`http://localhost:3000`**).*
+
+The frontend runs on:
+
+```text
+http://localhost:3001
+```
+
+Frontend API configuration can be provided through:
+
+```text
+frontend/.env.example
+```
+
+Example:
+
+```properties
+VITE_API_BASE_URL=http://localhost:8080/api
+```
 
 ---
 
-### Step 4: Build for Production
+## 5. Production Build
 
-Frontend Production Build:
+### Frontend
+
 ```bash
 cd frontend
 npm run build
 ```
 
-Backend Package:
+### Backend
+
 ```bash
 cd backend
 .\mvnw.cmd clean package
@@ -219,37 +321,155 @@ cd backend
 
 ---
 
-## 🔑 Pre-Seeded Quick Credentials
+## 🔐 Data Seeding
 
-The backend `DataSeeder` automatically populates the database on startup with the following initial credentials:
+Data seeding is **disabled by default** for production safety.
 
-| Role | Email | Password | Access Level |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@ecommerce.com` | `admin123` | Full access (Admin Portal, Product CRUD, Order Statuses, Coupons) |
-| **User** | `john@example.com` | `password123` | Customer access (Browse Products, Shopping Cart, Checkout, My Orders) |
+For local development, it can be enabled through environment variables:
 
-*Pre-seeded Coupon Code:* **`SAVE10`** (10% OFF orders above ₹500, max discount ₹200).
+```properties
+SEED_ENABLED=true
+SEED_ADMIN_EMAIL=your_admin_email
+SEED_ADMIN_PASSWORD=your_admin_password
+SEED_USER_EMAIL=your_user_email
+SEED_USER_PASSWORD=your_user_password
+```
 
----
-
-## 📖 API Documentation (Swagger UI)
-
-Interactive OpenAPI / Swagger documentation is available when the backend is running:
-- **Title:** `CartPulse REST API`
-- **URL:** [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-- **OpenAPI JSON:** [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
-
-To test protected endpoints in Swagger UI:
-1. Execute `POST /api/auth/login` with credentials.
-2. Copy the returned JWT token.
-3. Click the **Authorize** button at the top right of Swagger UI and paste the token.
+This allows test users and sample data to be configured without storing passwords directly in the source code.
 
 ---
 
-## 🧪 Unit Testing Summary
+## 📖 API Documentation
 
-Service unit tests are implemented using **JUnit 5** and **Mockito**:
-- `CartServiceTest`: Tests cart retrieval, new user cart creation, adding items, and stock validation.
-- `ProductServiceTest`: Tests product lookup, search, creation, and stock updates.
-- `CouponServiceTest`: Tests coupon validation (active flag, minimum order requirement, expiration logic).
-- `OrderServiceTest`: Tests atomic checkout logic, stock reduction, and order cancellation stock restoration.
+CartPulse provides interactive API documentation using Swagger UI.
+
+When the backend is running:
+
+```text
+http://localhost:8080/swagger-ui/index.html
+```
+
+OpenAPI specification:
+
+```text
+http://localhost:8080/v3/api-docs
+```
+
+### Testing Protected APIs
+
+1. Call `POST /api/auth/login`
+2. Obtain the JWT token
+3. Click **Authorize** in Swagger UI
+4. Enter the JWT token
+5. Test the protected endpoints
+
+---
+
+## 🧪 Testing
+
+The backend contains service-level unit tests using **JUnit 5 and Mockito**.
+
+Current tests cover areas such as:
+
+- Cart operations
+- Product operations
+- Product filtering
+- Stock validation
+- Coupon validation
+- Order checkout
+- Order cancellation
+- Stock restoration
+
+Run all backend tests with:
+
+```bash
+cd backend
+.\mvnw.cmd test
+```
+
+---
+
+## 📌 API Modules
+
+The application currently provides REST APIs for:
+
+| Module | Description |
+|---|---|
+| Authentication | Registration, login and current user |
+| Products | Product catalog, search and filtering |
+| Cart | Cart and cart item management |
+| Coupons | Coupon validation and administration |
+| Orders | Checkout, order history and status management |
+| Admin | Dashboard statistics and administration |
+| Health | Backend health check |
+
+---
+
+## 💡 Interview Highlights
+
+CartPulse demonstrates practical experience with:
+
+- Java and Spring Boot
+- REST API development
+- Spring Data JPA
+- Hibernate
+- MySQL
+- Spring Security
+- JWT authentication
+- Role-based authorization
+- Constructor-based dependency injection
+- `@Transactional`
+- Global exception handling
+- Stock management
+- Price snapshot pattern
+- JUnit and Mockito
+- React and Axios
+- Modular monolith architecture
+
+---
+
+## 📁 Project Structure
+
+```text
+CartPulse/
+│
+├── backend/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/
+│   │   │   │   └── com/ecommerce/
+│   │   │   └── resources/
+│   │   └── test/
+│   ├── pom.xml
+│   └── mvnw.cmd
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   └── ...
+│   ├── package.json
+│   └── vite.config.js
+│
+├── .gitignore
+└── README.md
+```
+
+---
+
+## 🚫 Project Scope
+
+CartPulse intentionally follows a simple modular-monolith architecture without introducing unnecessary infrastructure such as:
+
+- Kafka
+- Docker
+- Microservices
+
+The goal is to demonstrate strong fundamentals in **Java, Spring Boot, REST APIs, databases, security, and full-stack development**.
+
+---
+
+## 📌 Project Status
+
+CartPulse is an interview-ready full-stack e-commerce project demonstrating practical implementation of **Java, Spring Boot, React, MySQL, REST APIs, JWT security, transactional processing, and automated testing**.
