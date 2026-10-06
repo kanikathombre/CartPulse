@@ -473,3 +473,9 @@ The goal is to demonstrate strong fundamentals in **Java, Spring Boot, REST APIs
 ## 📌 Project Status
 
 CartPulse is an interview-ready full-stack e-commerce project demonstrating practical implementation of **Java, Spring Boot, React, MySQL, REST APIs, JWT security, transactional processing, and automated testing**.
+
+## 🚀 Live Demo
+
+- **Frontend:** https://cartpulse-q9g1.onrender.com/
+- **Backend API:** https://cartpulse-backend-661n.onrender.com/
+- **GitHub:** https://github.com/kanikathombre/CartPulse
